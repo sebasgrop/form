@@ -12,6 +12,7 @@ Next.js App Router · TypeScript estricto · Tailwind CSS v4 · `node:sqlite` (s
 ## Migraciones
 `PRAGMA user_version` guarda la versión del esquema (actual: 3). Al abrir una base existente, `src/lib/db/index.ts` aplica en orden las migraciones de `MIGRATIONS` (cada una en una transacción) y antes crea un respaldo `data/backup-v<N>-*.db`. Una base nueva se crea directamente con `SCHEMA_SQL`. Cambios por versión:
 - v2: catálogo de ejercicios y músculos.
+- v4: `foods.fdc_id` (id de USDA FoodData Central, único) para no duplicar alimentos importados.
 - v3: `exercise_sets.kind` (`normal`, `warmup`, `failure`, `drop`) y `exercise_sets.duration_seconds` (series medidas por tiempo).
 
 ## Principios
@@ -43,6 +44,9 @@ Pantalla `/training/muscles` (cálculo en `src/features/training/progress.ts`). 
 - Un grupo cuenta cada serie una sola vez (principal si algún músculo del grupo es principal en ese ejercicio).
 - Las semanas empiezan el lunes. Las series de ejercicios sin vínculo al catálogo no se cuentan.
 - Las series de calentamiento (`kind = 'warmup'`) se excluyen de todos los cálculos (series, volumen, carga, historial y «última vez»).
+
+## Integración con USDA
+`src/features/nutrition/usda.ts` consulta `POST /fdc/v1/foods/search` con la clave de `USDA_API_KEY` (solo servidor, cabecera `X-Api-Key`, nunca en mensajes de error). Energía: nutriente 1008 o, si falta, 2047/2048 (Atwater); proteínas 1003, carbohidratos 1005, grasas 1004. Los valores que USDA no informa se dejan vacíos para completarlos a mano. El alimento se guarda como propio (`source = custom`) con su `fdc_id`.
 
 ## Decisiones clave
 - Pasos, sueño y agua son hábitos numéricos con `system_key`; el Panel lee de `habit_logs`. «Alcanzar objetivo de proteínas» y «Completar entrenamiento» se completan solos desde Nutrición y Entrenamiento.

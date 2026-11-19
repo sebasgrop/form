@@ -38,6 +38,20 @@ Cada ejercicio del catálogo (54 precargados, editables) tiene **músculos princ
 
 Cada serie registrada guarda el vínculo con su ejercicio de catálogo (`exercise_sets.catalog_id`). Con eso, **Entrenamiento → Progreso por músculo** muestra por músculo y por grupo (últimas 4, 8 o 12 semanas, comparado con el período anterior): series principales y accesorias, volumen, carga máxima y evolución semanal.
 
+## Buscar alimentos en USDA FoodData Central
+
+En **Nutrición → Biblioteca de alimentos → USDA** podés buscar entre miles de alimentos con su información nutricional (por 100 g) y agregarlos a tu biblioteca.
+
+1. Conseguí una clave gratis en <https://fdc.nal.usda.gov/api-key-signup>.
+2. Copiá `.env.example` como `.env.local` y completá `USDA_API_KEY=tu_clave`. Ese archivo no se sube a git.
+3. Reiniciá la app (`npm run dev` o `npm start`).
+
+La clave la usa solo el servidor: nunca llega al navegador. Detalles:
+- La base de USDA está en inglés, así que se busca en inglés (por ejemplo `chicken breast`). Al agregar un alimento podés cambiarle el nombre.
+- Por defecto se buscan alimentos genéricos (Foundation, SR Legacy y FNDDS); también hay productos de marca de EE. UU.
+- Si USDA no informa algún valor (calorías, proteínas, carbohidratos o grasas), queda vacío para que lo completes: no se inventan valores.
+- Cada alimento importado guarda su id de USDA, por lo que no se duplica, y muestra la etiqueta «USDA».
+
 ## Importar el historial de Strong
 
 Con una exportación CSV de la app Strong (Ajustes → Exportar datos):
