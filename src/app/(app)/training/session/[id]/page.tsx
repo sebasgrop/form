@@ -66,8 +66,9 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
     });
   }
 
-  const totalSets = sets.length;
-  const volume = sets.reduce((s, x) => s + x.weight_kg * x.reps, 0);
+  const workingSets = sets.filter((s) => s.kind !== "warmup");
+  const totalSets = workingSets.length;
+  const volume = workingSets.reduce((s, x) => s + x.weight_kg * x.reps, 0);
 
   return (
     <>

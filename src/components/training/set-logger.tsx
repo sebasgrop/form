@@ -11,7 +11,17 @@ import { nf } from "@/lib/format";
 import { ExercisePicker } from "./exercise-picker";
 import { MuscleChips } from "./muscle-chips";
 
-type SetData = { id: number; set_number: number; weight_kg: number; reps: number };
+type SetData = {
+  id: number;
+  set_number: number;
+  weight_kg: number;
+  reps: number;
+  kind: "normal" | "warmup" | "failure" | "drop";
+  duration_seconds: number | null;
+};
+
+const KIND_LABEL = { normal: "", warmup: "Calentamiento", failure: "Al fallo", drop: "Descendente" } as const;
+const KIND_TAG = { normal: "", warmup: "C", failure: "F", drop: "D" } as const;
 
 export type ExerciseBlock = {
   position: number;
@@ -47,7 +57,17 @@ function SetRow({ set, index }: { set: SetData; index: number }) {
   return (
     <div>
       <div className="grid grid-cols-[2rem_1fr_1fr_auto] items-center gap-2">
-        <span className="text-center text-xs text-muted tabular-nums">{index + 1}</span>
+        <span
+          className="text-center text-xs text-muted tabular-nums"
+          title={KIND_LABEL[set.kind] || undefined}
+          aria-label={KIND_LABEL[set.kind] ? `Serie ${index + 1}: ${KIND_LABEL[set.kind].toLowerCase()}` : undefined}
+        >
+          {set.kind === "normal" ? (
+            index + 1
+          ) : (
+            <span className="rounded bg-surface-2 px-1 py-0.5 text-[10px] font-medium">{KIND_TAG[set.kind]}</span>
+          )}
+        </span>
         <input
           aria-label={`Peso de la serie ${index + 1} en kg`}
           type="number"
@@ -59,16 +79,22 @@ function SetRow({ set, index }: { set: SetData; index: number }) {
           onKeyDown={(e) => e.key === "Enter" && dirty && save()}
           className={numCls}
         />
-        <input
-          aria-label={`Repeticiones de la serie ${index + 1}`}
-          type="number"
-          min={0}
-          inputMode="numeric"
-          value={reps}
-          onChange={(e) => setReps(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && dirty && save()}
-          className={numCls}
-        />
+        {set.duration_seconds != null && set.duration_seconds > 0 ? (
+          <span className="grid h-9 place-items-center rounded-control bg-surface-2 text-sm tabular-nums text-muted" title="Serie medida por tiempo">
+            {set.duration_seconds} s
+          </span>
+        ) : (
+          <input
+            aria-label={`Repeticiones de la serie ${index + 1}`}
+            type="number"
+            min={0}
+            inputMode="numeric"
+            value={reps}
+            onChange={(e) => setReps(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && dirty && save()}
+            className={numCls}
+          />
+        )}
         <div className="flex w-[4.5rem] justify-end gap-1">
           {dirty ? (
             <button type="button" onClick={save} disabled={pending} className={buttonClass("primary", "sm")}>
@@ -93,9 +119,12 @@ function SetRow({ set, index }: { set: SetData; index: number }) {
 }
 
 export function ExerciseCard({ sessionId, block }: { sessionId: number; block: ExerciseBlock }) {
-  const lastSet = block.sets[block.sets.length - 1] ?? null;
-  const hint = lastSet ?? block.last?.sets[block.sets.length] ?? block.last?.sets[block.last.sets.length - 1] ?? null;
-  const done = block.targetSets != null && block.sets.length >= block.targetSets;
+  // los calentamientos se muestran pero no cuentan como series de trabajo
+  const working = block.sets.filter((s) => s.kind !== "warmup");
+  const lastSet = working[working.length - 1] ?? null;
+  const hint = lastSet ?? block.last?.sets[working.length] ?? block.last?.sets[block.last.sets.length - 1] ?? null;
+  const done = block.targetSets != null && working.length >= block.targetSets;
+  let workNumber = 0;
 
   return (
     <section className="rounded-card border border-line bg-surface p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
@@ -103,7 +132,7 @@ export function ExerciseCard({ sessionId, block }: { sessionId: number; block: E
         <h3 className="text-sm font-medium">{block.name}</h3>
         {block.targetSets != null && (
           <p className="text-[11px] text-muted">
-            Objetivo {block.targetSets} × {block.repRange} · {block.sets.length} registradas{done ? " · completo" : ""}
+            Objetivo {block.targetSets} × {block.repRange} · {working.length} registradas{done ? " · completo" : ""}
           </p>
         )}
         <MuscleChips primary={block.muscles.primary} secondary={block.muscles.secondary} className="mt-2" />
@@ -123,9 +152,10 @@ export function ExerciseCard({ sessionId, block }: { sessionId: number; block: E
         <span className="w-[4.5rem]" />
       </div>
       <div className="space-y-2">
-        {block.sets.map((s, i) => (
-          <SetRow key={`${s.id}-${s.weight_kg}-${s.reps}`} set={s} index={i} />
-        ))}
+        {block.sets.map((s) => {
+          if (s.kind !== "warmup") workNumber++;
+          return <SetRow key={`${s.id}-${s.weight_kg}-${s.reps}`} set={s} index={workNumber - 1} />;
+        })}
       </div>
 
       <ActionForm
@@ -141,7 +171,7 @@ export function ExerciseCard({ sessionId, block }: { sessionId: number; block: E
         className="mt-2"
       >
         <div className="grid grid-cols-[2rem_1fr_1fr_auto] items-center gap-2">
-          <span className="text-center text-xs text-muted tabular-nums">{block.sets.length + 1}</span>
+          <span className="text-center text-xs text-muted tabular-nums">{working.length + 1}</span>
           <input
             name="weight_kg"
             aria-label="Peso en kg de la próxima serie"

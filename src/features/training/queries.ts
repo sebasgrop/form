@@ -41,6 +41,8 @@ export type SetRow = {
   set_number: number;
   weight_kg: number;
   reps: number;
+  kind: "normal" | "warmup" | "failure" | "drop";
+  duration_seconds: number | null;
 };
 
 export function listTemplates(): Template[] {
@@ -81,7 +83,8 @@ export type SessionSummary = Session & { set_count: number; volume: number; exer
 
 export function recentSessions(limit = 12): SessionSummary[] {
   return all<SessionSummary>(
-    `SELECT s.*, COUNT(e.id) AS set_count, COALESCE(SUM(e.weight_kg * e.reps), 0) AS volume,
+    `SELECT s.*, COUNT(CASE WHEN e.kind <> 'warmup' THEN 1 END) AS set_count,
+            COALESCE(SUM(CASE WHEN e.kind <> 'warmup' THEN e.weight_kg * e.reps END), 0) AS volume,
             COUNT(DISTINCT e.exercise_position) AS exercise_count
      FROM workout_sessions s LEFT JOIN exercise_sets e ON e.session_id = s.id
      WHERE s.ended_at IS NOT NULL
@@ -97,14 +100,14 @@ export function lastPerformance(exerciseName: string, excludeSessionId: number):
   const row = get<{ id: number; session_date: string }>(
     `SELECT s.id, s.session_date FROM workout_sessions s
      JOIN exercise_sets e ON e.session_id = s.id
-     WHERE e.exercise_name = ? AND s.id <> ? AND s.ended_at IS NOT NULL
+     WHERE e.exercise_name = ? AND e.kind <> 'warmup' AND s.id <> ? AND s.ended_at IS NOT NULL
      ORDER BY s.session_date DESC, s.id DESC LIMIT 1`,
     exerciseName,
     excludeSessionId,
   );
   if (!row) return undefined;
   const sets = all<{ weight_kg: number; reps: number }>(
-    "SELECT weight_kg, reps FROM exercise_sets WHERE session_id = ? AND exercise_name = ? ORDER BY set_number",
+    "SELECT weight_kg, reps FROM exercise_sets WHERE session_id = ? AND exercise_name = ? AND kind <> 'warmup' ORDER BY set_number",
     row.id,
     exerciseName,
   );

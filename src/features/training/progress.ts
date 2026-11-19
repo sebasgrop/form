@@ -3,7 +3,8 @@ import { all } from "@/lib/db";
 import { addDays, startOfWeek, today } from "@/lib/dates";
 
 /**
- * Progreso por músculo y por grupo muscular a partir de las series de entrenamientos terminados.
+ * Progreso por músculo y por grupo muscular a partir de las series de entrenamientos terminados
+ * (las series de calentamiento no se cuentan).
  *
  * - Una serie cuenta como "principal" para un músculo si el ejercicio lo trabaja como principal,
  *   y como "accesoria" si lo trabaja como accesorio.
@@ -83,7 +84,7 @@ export function muscleProgress(weeks: number): Progress {
      JOIN workout_sessions s ON s.id = es.session_id
      JOIN exercise_muscles em ON em.exercise_id = es.catalog_id
      JOIN muscles m ON m.id = em.muscle_id
-     WHERE s.ended_at IS NOT NULL AND s.session_date BETWEEN ? AND ?`,
+     WHERE s.ended_at IS NOT NULL AND es.kind <> 'warmup' AND s.session_date BETWEEN ? AND ?`,
     prevFrom,
     to,
   );
