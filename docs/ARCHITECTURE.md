@@ -9,6 +9,11 @@ Next.js App Router · TypeScript estricto · Tailwind CSS v4 · `node:sqlite` (s
 - Copia de seguridad = copiar `data/`. Ambas rutas están en `.gitignore`.
 - Límite: los datos viven solo en la máquina que ejecuta la app. Si en el futuro se quisiera sincronizar entre dispositivos, solo habría que cambiar la capa `src/lib/db`.
 
+## Migraciones
+`PRAGMA user_version` guarda la versión del esquema (actual: 3). Al abrir una base existente, `src/lib/db/index.ts` aplica en orden las migraciones de `MIGRATIONS` (cada una en una transacción) y antes crea un respaldo `data/backup-v<N>-*.db`. Una base nueva se crea directamente con `SCHEMA_SQL`. Cambios por versión:
+- v2: catálogo de ejercicios y músculos.
+- v3: `exercise_sets.kind` (`normal`, `warmup`, `failure`, `drop`) y `exercise_sets.duration_seconds` (series medidas por tiempo).
+
 ## Principios
 - Los Server Components leen de SQLite vía `src/lib/db`; las mutaciones son Server Actions validadas con zod que terminan en `revalidatePath`.
 - Islas de cliente solo para interacción (hábitos, series, diálogos, gráficos).
@@ -37,6 +42,7 @@ Pantalla `/training/muscles` (cálculo en `src/features/training/progress.ts`). 
 - Volumen y carga máxima cuentan solo series donde el músculo es principal; las accesorias se muestran aparte.
 - Un grupo cuenta cada serie una sola vez (principal si algún músculo del grupo es principal en ese ejercicio).
 - Las semanas empiezan el lunes. Las series de ejercicios sin vínculo al catálogo no se cuentan.
+- Las series de calentamiento (`kind = 'warmup'`) se excluyen de todos los cálculos (series, volumen, carga, historial y «última vez»).
 
 ## Decisiones clave
 - Pasos, sueño y agua son hábitos numéricos con `system_key`; el Panel lee de `habit_logs`. «Alcanzar objetivo de proteínas» y «Completar entrenamiento» se completan solos desde Nutrición y Entrenamiento.
