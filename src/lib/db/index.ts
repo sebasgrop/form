@@ -1,0 +1,71 @@
+import "server-only";
+import { DatabaseSync, type SQLInputValue } from "node:sqlite";
+import fs from "node:fs";
+import path from "node:path";
+import { SCHEMA_SQL, SCHEMA_VERSION } from "./schema";
+import { seedIfEmpty } from "./seed";
+
+export const DATA_DIR = process.env.FORM_DATA_DIR ?? path.join(/*turbopackIgnore: true*/ process.cwd(), "data");
+export const PHOTOS_DIR = path.join(/*turbopackIgnore: true*/ DATA_DIR, "photos");
+
+const globalForDb = globalThis as unknown as { __formDb?: DatabaseSync };
+
+function open(): DatabaseSync {
+  fs.mkdirSync(PHOTOS_DIR, { recursive: true });
+  const db = new DatabaseSync(path.join(/*turbopackIgnore: true*/ DATA_DIR, "form.db"));
+  db.exec("PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;");
+  const { user_version: version } = db.prepare("PRAGMA user_version").get() as { user_version: number };
+  const hasProfile = db.prepare("SELECT 1 AS x FROM sqlite_master WHERE name = 'profile'").get();
+  if (hasProfile && version < SCHEMA_VERSION) {
+    throw new Error(
+      `La base de datos (versión ${version}) es anterior a la versión ${SCHEMA_VERSION} del esquema. Mové data/form.db a otra carpeta para empezar de cero.`,
+    );
+  }
+  db.exec(SCHEMA_SQL);
+  db.exec(`PRAGMA user_version = ${SCHEMA_VERSION}`);
+  seedIfEmpty(db);
+  return db;
+}
+
+function getDb(): DatabaseSync {
+  return (globalForDb.__formDb ??= open());
+}
+
+type Params = SQLInputValue[];
+
+// node:sqlite returns null-prototype objects, which React cannot pass to Client Components.
+const plain = <T>(row: unknown): T => ({ ...(row as object) }) as T;
+
+export function all<T>(sql: string, ...params: Params): T[] {
+  return getDb().prepare(sql).all(...params).map((r) => plain<T>(r));
+}
+
+export function get<T>(sql: string, ...params: Params): T | undefined {
+  const r = getDb().prepare(sql).get(...params);
+  return r === undefined ? undefined : plain<T>(r);
+}
+
+export function run(sql: string, ...params: Params): { changes: number; id: number } {
+  const r = getDb().prepare(sql).run(...params);
+  return { changes: Number(r.changes), id: Number(r.lastInsertRowid) };
+}
+
+let depth = 0;
+
+/** Transacción reentrante: la externa usa BEGIN/COMMIT y las anidadas usan SAVEPOINT. */
+export function transaction<T>(fn: () => T): T {
+  const db = getDb();
+  const name = `sp_${depth}`;
+  db.exec(depth === 0 ? "BEGIN" : `SAVEPOINT ${name}`);
+  depth++;
+  try {
+    const out = fn();
+    depth--;
+    db.exec(depth === 0 ? "COMMIT" : `RELEASE ${name}`);
+    return out;
+  } catch (e) {
+    depth--;
+    db.exec(depth === 0 ? "ROLLBACK" : `ROLLBACK TO ${name}; RELEASE ${name}`);
+    throw e;
+  }
+}
