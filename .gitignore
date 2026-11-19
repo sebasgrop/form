@@ -42,3 +42,6 @@ next-env.d.ts
 
 # local data (database + photos): back up this folder
 /data/
+
+# plantilla de variables de entorno (sin valores secretos)
+!.env.example
