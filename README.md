@@ -28,7 +28,7 @@ Para abrirla desde el celular en la misma wifi: `npm start -- -H 0.0.0.0` y entr
 | Panel | Resumen del día, métricas, checklist de hábitos, alimentación vs. objetivos, resumen semanal, evolución del peso, registro rápido de peso y agua |
 | Hábitos | Hábitos sí/no y numéricos, frecuencia, rachas, % de cumplimiento, historial de 28 días, edición y archivo, carga de días pasados |
 | Entrenamiento | Rutinas editables, registro de series editables, último rendimiento por ejercicio, historial y **biblioteca de ejercicios con músculos** |
-| Nutrición | Desayuno/almuerzo/merienda/cena, biblioteca de alimentos propios, objetivos editables, gráfico de calorías |
+| Nutrición | Desayuno/almuerzo/merienda/cena, biblioteca de alimentos (con búsqueda), **platos** (conjuntos de alimentos con macros totales y por porción), objetivos editables, gráfico de calorías |
 | Cuerpo | Peso y medidas, gráficos, historial, comparación de fechas, fotos privadas |
 | Ajustes | Perfil, objetivos, carpeta de datos, exportación JSON |
 
@@ -37,6 +37,26 @@ Para abrirla desde el celular en la misma wifi: `npm start -- -H 0.0.0.0` y entr
 Cada ejercicio del catálogo (54 precargados, editables) tiene **músculos principales** y **músculos accesorios** sobre una lista de 19 músculos agrupados (Pecho, Espalda, Hombros, Brazos, Core, Piernas). Al agregar un ejercicio a una rutina o a un entrenamiento se busca en el catálogo; si es nuevo, se piden sus músculos y se suma al catálogo.
 
 Cada serie registrada guarda el vínculo con su ejercicio de catálogo (`exercise_sets.catalog_id`). Con eso, **Entrenamiento → Progreso por músculo** muestra por músculo y por grupo (últimas 4, 8 o 12 semanas, comparado con el período anterior): series principales y accesorias, volumen, carga máxima y evolución semanal.
+
+## Platos
+
+En **Nutrición → Platos** creás platos combinando alimentos de tu biblioteca con sus cantidades (por ejemplo «pollo con arroz»). Cada plato muestra los macronutrientes del plato completo y por porción (indicás cuántas porciones rinde) y se calcula solo a partir de los alimentos. Con **Registrar** (o desde «Agregar alimento» → pestaña *Plato*) lo sumás a una comida indicando las porciones: queda una sola entrada con los macros copiados, así que editar o borrar el plato después no cambia lo ya registrado.
+
+## Alimentos argentinos precargados
+
+La biblioteca puede traer 260 alimentos de uso común en Argentina (cortes de carne, milanesas, pastas, huevos, lácteos, panes, frutas, verduras, pescados...) por 100 g, con la etiqueta de su tabla de origen:
+
+```bash
+node scripts/import-ar-foods.mjs --dry-run   # muestra qué se agregaría
+node scripts/import-ar-foods.mjs             # carga (con respaldo previo en data/)
+```
+
+- **ENNyS 2** (238 alimentos): «SARA 2: Tabla de composición química de alimentos para Argentina», Ministerio de Salud de la Nación (2022). Los carbohidratos son los *disponibles* (sin fibra), coherentes con las calorías.
+- **Argenfood, UNLu** (22 cortes vacunos): tabla «Carnes y derivados». Donde la tabla trae los carbohidratos como «...», se calcularon con la fórmula de la propia fuente (por diferencia: 100 − agua − proteínas − lípidos − cenizas) y se descartaron los resultados incoherentes.
+- Solo se incluyen alimentos con los cuatro valores completos y calorías consistentes con los macros; nada se estimó.
+- Los nombres siguen los de las tablas y todo es editable. Las milanesas «rebozadas» de ENNyS 2 tienen pocas calorías (≈160 por 100 g), lo que sugiere que son sin freír: revisalas según cómo las prepares.
+- Es idempotente y no toca alimentos tuyos: si ya existe uno con el mismo nombre, se omite.
+- Los datos viven en `scripts/ar-foods-data.mjs`, que se puede revisar y ampliar.
 
 ## Buscar alimentos en USDA FoodData Central
 

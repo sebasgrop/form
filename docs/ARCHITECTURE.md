@@ -12,6 +12,8 @@ Next.js App Router · TypeScript estricto · Tailwind CSS v4 · `node:sqlite` (s
 ## Migraciones
 `PRAGMA user_version` guarda la versión del esquema (actual: 3). Al abrir una base existente, `src/lib/db/index.ts` aplica en orden las migraciones de `MIGRATIONS` (cada una en una transacción) y antes crea un respaldo `data/backup-v<N>-*.db`. Una base nueva se crea directamente con `SCHEMA_SQL`. Cambios por versión:
 - v2: catálogo de ejercicios y músculos.
+- v6: `foods.reference` (tabla de origen de alimentos precargados, p. ej. ENNyS 2; único junto con el nombre).
+- v5: platos (`dishes`, `dish_items`) y `meal_entries.dish_id`.
 - v4: `foods.fdc_id` (id de USDA FoodData Central, único) para no duplicar alimentos importados.
 - v3: `exercise_sets.kind` (`normal`, `warmup`, `failure`, `drop`) y `exercise_sets.duration_seconds` (series medidas por tiempo).
 
@@ -44,6 +46,9 @@ Pantalla `/training/muscles` (cálculo en `src/features/training/progress.ts`). 
 - Un grupo cuenta cada serie una sola vez (principal si algún músculo del grupo es principal en ese ejercicio).
 - Las semanas empiezan el lunes. Las series de ejercicios sin vínculo al catálogo no se cuentan.
 - Las series de calentamiento (`kind = 'warmup'`) se excluyen de todos los cálculos (series, volumen, carga, historial y «última vez»).
+
+## Platos
+`dishes` (nombre único, porciones que rinde) y `dish_items` (alimento + cantidad en la unidad del alimento). Los macros del plato se calculan al leer, a partir de los alimentos actuales; por eso editar un alimento actualiza el plato. Registrar un plato crea una sola fila en `meal_entries` con los macros por porción × porciones copiados (`serving_unit = 'porción'`, `dish_id` solo para trazabilidad, `ON DELETE SET NULL`), de modo que el historial no cambia si se edita o borra el plato.
 
 ## Integración con USDA
 `src/features/nutrition/usda.ts` consulta `POST /fdc/v1/foods/search` con la clave de `USDA_API_KEY` (solo servidor, cabecera `X-Api-Key`, nunca en mensajes de error). Energía: nutriente 1008 o, si falta, 2047/2048 (Atwater); proteínas 1003, carbohidratos 1005, grasas 1004. Los valores que USDA no informa se dejan vacíos para completarlos a mano. El alimento se guarda como propio (`source = custom`) con su `fdc_id`.
