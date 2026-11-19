@@ -5,14 +5,14 @@ import { Card, CardHeader, PageHeader } from "@/components/ui/card";
 import { ProgressBar } from "@/components/ui/progress";
 import { ModalButton } from "@/components/ui/modal";
 import { ActionButton } from "@/components/ui/action-form";
-import { EmptyState } from "@/components/ui/states";
 import { buttonClass } from "@/components/ui/button";
 import { DailyBars } from "@/components/charts/bar-chart";
 import { AddFoodForm, EntryEditForm, FoodForm, GoalsForm } from "@/components/nutrition/forms";
 import { UsdaSearch } from "@/components/nutrition/usda-search";
+import { FoodLibraryList } from "@/components/nutrition/food-library";
 import { listDishes } from "@/features/nutrition/dishes";
 import { usdaConfigured } from "@/features/nutrition/usda";
-import { deleteFood, deleteMealEntry } from "@/features/nutrition/actions";
+import { deleteMealEntry } from "@/features/nutrition/actions";
 import { MEALS, dailyTotals, goalsFor, listFoods, mealsForDate, round, totalsForDate } from "@/features/nutrition/queries";
 import { addDays, formatLong, formatShort, lastNDays, today } from "@/lib/dates";
 import { nf } from "@/lib/format";
@@ -160,7 +160,7 @@ export default async function NutritionPage({ searchParams }: { searchParams: Pr
         <Card className="h-fit lg:col-span-2">
           <CardHeader
             title="Biblioteca de alimentos"
-            hint="Por porción. Los alimentos iniciales son aproximados: editalos para que coincidan con tus etiquetas."
+            hint="Por porción. Podés buscar, editar y sumar alimentos propios, de USDA o de tablas argentinas."
             action={
               <div className="flex gap-1.5">
                 <ModalButton title="Buscar en USDA FoodData Central" label="USDA" size="sm" icon={<Database className="h-3.5 w-3.5" />} wide>
@@ -172,42 +172,7 @@ export default async function NutritionPage({ searchParams }: { searchParams: Pr
               </div>
             }
           />
-          {foods.length === 0 ? (
-            <EmptyState title="No hay alimentos" description="Creá un alimento propio para empezar a registrar." />
-          ) : (
-            <ul className="max-h-[32rem] divide-y divide-line overflow-y-auto">
-              {foods.map((f) => (
-                <li key={f.id} className="flex items-center gap-2 py-2.5">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm">
-                      {f.name}
-                      {f.fdc_id && (
-                        <span className="ml-2 rounded-full border border-accent/40 bg-accent-soft px-1.5 py-px text-[10px] text-accent-strong">USDA</span>
-                      )}
-                      {f.source === "seed_approx" && (
-                        <span className="ml-2 rounded-full border border-line-strong px-1.5 py-px text-[10px] text-muted">aprox.</span>
-                      )}
-                    </p>
-                    <p className="text-[11px] tabular-nums text-muted">
-                      {f.serving_size} {f.serving_unit}: {f.calories} kcal · P {f.protein_g} · C {f.carbs_g} · G {f.fat_g}
-                    </p>
-                  </div>
-                  <ModalButton
-                    title="Editar alimento"
-                    variant="ghost"
-                    size="sm"
-                    ariaLabel={`Editar ${f.name}`}
-                    icon={<Pencil className="h-3.5 w-3.5" />}
-                  >
-                    <FoodForm food={f} />
-                  </ModalButton>
-                  <ActionButton action={deleteFood.bind(null, f.id)} confirm={`¿Quitar «${f.name}» de la biblioteca? Las comidas registradas conservan sus valores.`} ariaLabel={`Quitar ${f.name}`}>
-                    Quitar
-                  </ActionButton>
-                </li>
-              ))}
-            </ul>
-          )}
+          <FoodLibraryList foods={foods} />
         </Card>
       </div>
     </>

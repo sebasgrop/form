@@ -7,6 +7,7 @@ import { Field, inputClass } from "@/components/ui/button";
 import { addDishEntry } from "@/features/nutrition/dish-actions";
 import { addMealEntry, createFood, saveGoals, updateFood, updateMealEntry } from "@/features/nutrition/actions";
 import { nf } from "@/lib/format";
+import { matchesSearch } from "@/lib/text";
 
 type FoodOpt = {
   id: number;
@@ -41,7 +42,7 @@ export function AddFoodForm({ foods, dishes = [], meal, date }: { foods: FoodOpt
   const [qty, setQty] = useState("");
   const [dishId, setDishId] = useState<number | "">("");
   const [portions, setPortions] = useState("1");
-  const shown = useMemo(() => foods.filter((f) => f.name.toLowerCase().includes(q.toLowerCase())), [foods, q]);
+  const shown = useMemo(() => foods.filter((f) => matchesSearch(f.name, q)), [foods, q]);
   const food = foods.find((f) => f.id === foodId);
   const amount = Number(qty);
   const k = food && amount > 0 ? amount / food.serving_size : 0;
