@@ -14,7 +14,7 @@ import { cn } from "@/lib/cn";
 
 export const metadata: Metadata = { title: "Progreso por músculo" };
 
-const PERIODS = [4, 8, 12] as const;
+const PERIODS = [4, 8, 12, 26, 52] as const;
 
 function delta(cur: number, prev: number): string {
   if (prev === 0) return cur > 0 ? "nuevo" : "—";
