@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowDown, ArrowUp, BookOpen, ChevronRight, Dumbbell, Pencil, Play, Plus } from "lucide-react";
+import { ArrowDown, ArrowUp, BarChart3, BookOpen, ChevronRight, Dumbbell, Pencil, Play, Plus } from "lucide-react";
 import { Card, CardHeader, PageHeader } from "@/components/ui/card";
 import { ModalButton } from "@/components/ui/modal";
 import { ActionButton } from "@/components/ui/action-form";
@@ -34,6 +34,9 @@ export default function TrainingPage() {
         subtitle="Tus rutinas e historial de entrenamientos"
         action={
           <div className="flex flex-wrap gap-2">
+            <Link href="/training/muscles" className={buttonClass("secondary")}>
+              <BarChart3 className="h-4 w-4" aria-hidden /> Progreso por músculo
+            </Link>
             <Link href="/training/library" className={buttonClass("secondary")}>
               <BookOpen className="h-4 w-4" aria-hidden /> Biblioteca de ejercicios
             </Link>
