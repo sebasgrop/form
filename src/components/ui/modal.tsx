@@ -54,7 +54,7 @@ export function ModalButton({
         ref={ref}
         onClose={() => setOpen(false)}
         onClick={(e) => e.target === ref.current && setOpen(false)}
-        className={`m-auto rounded-card border border-line-strong bg-surface p-0 text-fg shadow-2xl backdrop:bg-slate-900/40 backdrop:backdrop-blur-sm ${
+        className={`m-auto rounded-card border border-line-strong bg-surface p-0 text-left text-fg shadow-2xl backdrop:bg-slate-900/40 backdrop:backdrop-blur-sm ${
           wide ? "w-[min(92vw,42rem)]" : "w-[min(92vw,30rem)]"
         }`}
       >
