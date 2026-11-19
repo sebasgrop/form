@@ -22,6 +22,12 @@ function open(): DatabaseSync {
         `La base de datos (versión ${version}) es demasiado antigua para migrarse. Mové data/form.db a otra carpeta para empezar de cero.`,
       );
     }
+    if (version > SCHEMA_VERSION) {
+      // Nunca se baja el número de versión: una app más vieja corrompería el control de migraciones.
+      throw new Error(
+        `La base de datos es de una versión más nueva (${version}) que esta app (${SCHEMA_VERSION}). Actualizá el código antes de abrirla.`,
+      );
+    }
     // Migraciones encadenadas, cada una atómica. Se respalda antes de tocar nada.
     if (version < SCHEMA_VERSION) {
       // copia consistente de la base (aunque esté en modo WAL) antes de migrar
@@ -33,7 +39,14 @@ function open(): DatabaseSync {
       if (!sql) throw new Error(`No hay migración desde la versión ${version} del esquema.`);
       db.exec("BEGIN");
       try {
-        db.exec(sql);
+        // Cada sentencia por separado: si una columna ya existe (migración aplicada a medias), se sigue.
+        for (const stmt of sql.split(";").map((x) => x.trim()).filter(Boolean)) {
+          try {
+            db.exec(stmt);
+          } catch (e) {
+            if (!(e instanceof Error && e.message.includes("duplicate column name"))) throw e;
+          }
+        }
         db.exec(`PRAGMA user_version = ${version + 1}`);
         db.exec("COMMIT");
       } catch (e) {
@@ -44,7 +57,7 @@ function open(): DatabaseSync {
     }
   }
   db.exec(SCHEMA_SQL);
-  db.exec(`PRAGMA user_version = ${SCHEMA_VERSION}`);
+  if (version !== SCHEMA_VERSION) db.exec(`PRAGMA user_version = ${SCHEMA_VERSION}`);
   seedIfEmpty(db);
   return db;
 }
