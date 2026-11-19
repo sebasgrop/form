@@ -83,3 +83,10 @@ export function macrosFor(food: Food, quantity: number): Macros {
 }
 
 export const round = (n: number) => Math.round(n);
+
+/** Todos los alimentos, incluidos los quitados de la biblioteca (para mostrar ingredientes de platos ya creados). */
+export function listAllFoods(): (Food & { archived: boolean })[] {
+  return all<Food & { archived: number }>(
+    "SELECT *, archived_at IS NOT NULL AS archived FROM foods ORDER BY name COLLATE NOCASE",
+  ).map((f) => ({ ...f, archived: !!f.archived }));
+}

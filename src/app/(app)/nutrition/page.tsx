@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Database, Pencil, Plus, Target } from "lucide-react";
+import { ChevronLeft, ChevronRight, Database, Pencil, Plus, Soup, Target } from "lucide-react";
 import { Card, CardHeader, PageHeader } from "@/components/ui/card";
 import { ProgressBar } from "@/components/ui/progress";
 import { ModalButton } from "@/components/ui/modal";
@@ -10,6 +10,7 @@ import { buttonClass } from "@/components/ui/button";
 import { DailyBars } from "@/components/charts/bar-chart";
 import { AddFoodForm, EntryEditForm, FoodForm, GoalsForm } from "@/components/nutrition/forms";
 import { UsdaSearch } from "@/components/nutrition/usda-search";
+import { listDishes } from "@/features/nutrition/dishes";
 import { usdaConfigured } from "@/features/nutrition/usda";
 import { deleteFood, deleteMealEntry } from "@/features/nutrition/actions";
 import { MEALS, dailyTotals, goalsFor, listFoods, mealsForDate, round, totalsForDate } from "@/features/nutrition/queries";
@@ -30,6 +31,7 @@ export default async function NutritionPage({ searchParams }: { searchParams: Pr
   const totals = totalsForDate(date);
   const entries = mealsForDate(date);
   const foods = listFoods();
+  const dishes = listDishes().map((d) => ({ id: d.id, name: d.name, servings: d.servings, perServing: d.perServing }));
 
   const days = lastNDays(7, date);
   const byDay = new Map(dailyTotals(days[0], date).map((d) => [d.entry_date, d.calories]));
@@ -48,9 +50,14 @@ export default async function NutritionPage({ searchParams }: { searchParams: Pr
         title="Nutrición"
         subtitle={formatLong(date)}
         action={
-          <ModalButton title="Objetivos diarios" label="Objetivos" icon={<Target className="h-4 w-4" />}>
-            <GoalsForm goals={goals} />
-          </ModalButton>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/nutrition/dishes" className={buttonClass("secondary")}>
+              <Soup className="h-4 w-4" aria-hidden /> Platos
+            </Link>
+            <ModalButton title="Objetivos diarios" label="Objetivos" icon={<Target className="h-4 w-4" />}>
+              <GoalsForm goals={goals} />
+            </ModalButton>
+          </div>
         }
       />
 
@@ -108,7 +115,7 @@ export default async function NutritionPage({ searchParams }: { searchParams: Pr
                   hint={rows.length ? `${nf(round(kcal))} kcal` : undefined}
                   action={
                     <ModalButton title={`Agregar a ${m.label.toLowerCase()}`} label="Agregar alimento" size="sm" icon={<Plus className="h-3.5 w-3.5" />}>
-                      <AddFoodForm foods={foods} meal={m.key} date={date} />
+                      <AddFoodForm foods={foods} dishes={dishes} meal={m.key} date={date} />
                     </ModalButton>
                   }
                 />
@@ -119,7 +126,12 @@ export default async function NutritionPage({ searchParams }: { searchParams: Pr
                     {rows.map((e) => (
                       <li key={e.id} className="flex items-center gap-2 py-2.5">
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm">{e.food_name}</p>
+                          <p className="flex items-center gap-2 truncate text-sm">
+                            <span className="truncate">{e.food_name}</span>
+                            {e.dish_id != null && (
+                              <span className="shrink-0 rounded-full border border-line-strong px-1.5 py-px text-[10px] text-muted">plato</span>
+                            )}
+                          </p>
                           <p className="text-[11px] tabular-nums text-muted">
                             {nf(e.quantity, 1)} {e.serving_unit} · {nf(round(e.calories))} kcal · P {round(e.protein_g)} · C {round(e.carbs_g)} · G {round(e.fat_g)}
                           </p>

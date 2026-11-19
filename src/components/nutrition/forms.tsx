@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { ActionForm } from "@/components/ui/action-form";
 import { Field, inputClass } from "@/components/ui/button";
+import { addDishEntry } from "@/features/nutrition/dish-actions";
 import { addMealEntry, createFood, saveGoals, updateFood, updateMealEntry } from "@/features/nutrition/actions";
 import { nf } from "@/lib/format";
 
@@ -25,61 +27,145 @@ const MEALS = [
   ["dinner", "Cena"],
 ] as const;
 
-export function AddFoodForm({ foods, meal, date }: { foods: FoodOpt[]; meal: string; date: string }) {
+export type DishOpt = {
+  id: number;
+  name: string;
+  servings: number;
+  perServing: { calories: number; protein_g: number; carbs_g: number; fat_g: number };
+};
+
+export function AddFoodForm({ foods, dishes = [], meal, date }: { foods: FoodOpt[]; dishes?: DishOpt[]; meal: string; date: string }) {
+  const [mode, setMode] = useState<"food" | "dish">("food");
   const [q, setQ] = useState("");
   const [foodId, setFoodId] = useState<number | "">("");
   const [qty, setQty] = useState("");
+  const [dishId, setDishId] = useState<number | "">("");
+  const [portions, setPortions] = useState("1");
   const shown = useMemo(() => foods.filter((f) => f.name.toLowerCase().includes(q.toLowerCase())), [foods, q]);
   const food = foods.find((f) => f.id === foodId);
   const amount = Number(qty);
   const k = food && amount > 0 ? amount / food.serving_size : 0;
+  const dish = dishes.find((d) => d.id === dishId);
+  const p = Number(portions) > 0 ? Number(portions) : 0;
 
   return (
-    <ActionForm action={addMealEntry} submitLabel="Agregar al registro" className="space-y-4">
+    <ActionForm action={mode === "dish" ? addDishEntry : addMealEntry} submitLabel="Agregar al registro" className="space-y-4">
       <input type="hidden" name="date" value={date} />
       <input type="hidden" name="meal" value={meal} />
-      <Field label="Buscar alimento">
-        <input value={q} onChange={(e) => setQ(e.target.value)} className={inputClass} placeholder="Escribí para filtrar..." autoFocus />
-      </Field>
-      <Field label="Alimento">
-        <select
-          name="food_id"
-          required
-          size={Math.min(6, Math.max(2, shown.length))}
-          value={foodId}
-          onChange={(e) => {
-            const id = Number(e.target.value);
-            setFoodId(id);
-            const f = foods.find((x) => x.id === id);
-            if (f && !qty) setQty(String(f.serving_size));
-          }}
-          className="w-full rounded-control border border-line-strong bg-surface p-1 text-sm focus:border-accent focus:outline-none"
-        >
-          {shown.length === 0 && <option disabled>Sin resultados. Creá primero un alimento propio.</option>}
-          {shown.map((f) => (
-            <option key={f.id} value={f.id} className="rounded px-2 py-1">
-              {f.name} ({f.calories} kcal / {f.serving_size} {f.serving_unit})
-            </option>
-          ))}
-        </select>
-      </Field>
-      <Field label={`Cantidad${food ? ` (${food.serving_unit})` : ""}`}>
-        <input
-          name="quantity"
-          type="number"
-          step="any"
-          min={0.1}
-          required
-          value={qty}
-          onChange={(e) => setQty(e.target.value)}
-          className={inputClass}
-          inputMode="decimal"
-        />
-      </Field>
-      {food && k > 0 && (
-        <p className="rounded-control bg-surface-2 px-3 py-2 text-xs tabular-nums text-muted">
-          {nf(food.calories * k, 1)} kcal · P {nf(food.protein_g * k, 1)} g · C {nf(food.carbs_g * k, 1)} g · G {nf(food.fat_g * k, 1)} g
+
+      <div role="tablist" aria-label="Qué agregar" className="flex gap-1 rounded-control border border-line bg-surface-2 p-1">
+        {(
+          [
+            ["food", "Alimento"],
+            ["dish", "Plato"],
+          ] as const
+        ).map(([m, label]) => (
+          <button
+            key={m}
+            type="button"
+            role="tab"
+            aria-selected={mode === m}
+            onClick={() => setMode(m)}
+            className={
+              "flex-1 rounded-[10px] px-3 py-1.5 text-xs transition-colors " +
+              (mode === m ? "bg-surface font-medium text-fg shadow-sm" : "text-muted hover:text-fg")
+            }
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {mode === "food" ? (
+        <>
+          <Field label="Buscar alimento">
+            <input value={q} onChange={(e) => setQ(e.target.value)} className={inputClass} placeholder="Escribí para filtrar..." data-autofocus="" />
+          </Field>
+          <Field label="Alimento">
+            <select
+              name="food_id"
+              required
+              size={Math.min(6, Math.max(2, shown.length))}
+              value={foodId}
+              onChange={(e) => {
+                const id = Number(e.target.value);
+                setFoodId(id);
+                const f = foods.find((x) => x.id === id);
+                if (f && !qty) setQty(String(f.serving_size));
+              }}
+              className="w-full rounded-control border border-line-strong bg-surface p-1 text-sm focus:border-accent focus:outline-none"
+            >
+              {shown.length === 0 && <option disabled>Sin resultados. Creá primero un alimento propio.</option>}
+              {shown.map((f) => (
+                <option key={f.id} value={f.id} className="rounded px-2 py-1">
+                  {f.name} ({f.calories} kcal / {f.serving_size} {f.serving_unit})
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label={`Cantidad${food ? ` (${food.serving_unit})` : ""}`}>
+            <input
+              name="quantity"
+              type="number"
+              step="any"
+              min={0.1}
+              required
+              value={qty}
+              onChange={(e) => setQty(e.target.value)}
+              className={inputClass}
+              inputMode="decimal"
+            />
+          </Field>
+          {food && k > 0 && (
+            <p className="rounded-control bg-surface-2 px-3 py-2 text-xs tabular-nums text-muted">
+              {nf(food.calories * k, 1)} kcal · P {nf(food.protein_g * k, 1)} g · C {nf(food.carbs_g * k, 1)} g · G {nf(food.fat_g * k, 1)} g
+            </p>
+          )}
+        </>
+      ) : dishes.length === 0 ? (
+        <p className="rounded-control bg-surface-2 px-3 py-4 text-center text-sm text-muted">
+          Todavía no creaste platos.{" "}
+          <Link href="/nutrition/dishes" className="text-accent-strong underline">
+            Crear un plato
+          </Link>
         </p>
+      ) : (
+        <>
+          <Field label="Plato">
+            <select
+              name="dish_id"
+              required
+              size={Math.min(6, Math.max(2, dishes.length))}
+              value={dishId}
+              onChange={(e) => setDishId(Number(e.target.value))}
+              className="w-full rounded-control border border-line-strong bg-surface p-1 text-sm focus:border-accent focus:outline-none"
+            >
+              {dishes.map((d) => (
+                <option key={d.id} value={d.id} className="rounded px-2 py-1">
+                  {d.name} ({nf(d.perServing.calories)} kcal por porción)
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Porciones">
+            <input
+              name="portions"
+              type="number"
+              step="any"
+              min={0.25}
+              required
+              value={portions}
+              onChange={(e) => setPortions(e.target.value)}
+              className={inputClass}
+              inputMode="decimal"
+            />
+          </Field>
+          {dish && p > 0 && (
+            <p className="rounded-control bg-surface-2 px-3 py-2 text-xs tabular-nums text-muted">
+              {nf(dish.perServing.calories * p, 1)} kcal · P {nf(dish.perServing.protein_g * p, 1)} g · C {nf(dish.perServing.carbs_g * p, 1)} g · G {nf(dish.perServing.fat_g * p, 1)} g
+            </p>
+          )}
+        </>
       )}
     </ActionForm>
   );
