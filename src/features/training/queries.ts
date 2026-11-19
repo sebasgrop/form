@@ -95,15 +95,18 @@ export function recentSessions(limit = 12): SessionSummary[] {
 
 export type LastPerformance = { session_date: string; sets: { weight_kg: number; reps: number }[] };
 
-/** Sets from the most recent finished session that included this exercise. */
-export function lastPerformance(exerciseName: string, excludeSessionId: number): LastPerformance | undefined {
+/** Sets from the most recent finished session *before* `session` that included this exercise. */
+export function lastPerformance(exerciseName: string, session: { id: number; session_date: string }): LastPerformance | undefined {
   const row = get<{ id: number; session_date: string }>(
     `SELECT s.id, s.session_date FROM workout_sessions s
      JOIN exercise_sets e ON e.session_id = s.id
-     WHERE e.exercise_name = ? AND e.kind <> 'warmup' AND s.id <> ? AND s.ended_at IS NOT NULL
+     WHERE e.exercise_name = ? AND e.kind <> 'warmup' AND s.ended_at IS NOT NULL
+       AND (s.session_date < ? OR (s.session_date = ? AND s.id < ?))
      ORDER BY s.session_date DESC, s.id DESC LIMIT 1`,
     exerciseName,
-    excludeSessionId,
+    session.session_date,
+    session.session_date,
+    session.id,
   );
   if (!row) return undefined;
   const sets = all<{ weight_kg: number; reps: number }>(

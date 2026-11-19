@@ -46,7 +46,7 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
       targetSets: e.target_sets,
       repRange: e.rep_min === e.rep_max ? `${e.rep_min}` : `${e.rep_min}-${e.rep_max}`,
       sets: sets.filter((s) => s.exercise_position === e.position),
-      last: lastPerformance(e.name, sessionId) ?? null,
+      last: lastPerformance(e.name, session) ?? null,
     });
   }
   // ejercicios anotados en esta sesión que no son de la rutina (extras, o rutina editada después)
@@ -62,7 +62,7 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
       targetSets: null,
       repRange: null,
       sets: rows,
-      last: lastPerformance(rows[0].exercise_name, sessionId) ?? null,
+      last: lastPerformance(rows[0].exercise_name, session) ?? null,
     });
   }
 
