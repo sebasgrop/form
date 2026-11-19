@@ -38,6 +38,22 @@ Cada ejercicio del catálogo (54 precargados, editables) tiene **músculos princ
 
 Cada serie registrada guarda el vínculo con su ejercicio de catálogo (`exercise_sets.catalog_id`). Con eso, **Entrenamiento → Progreso por músculo** muestra por músculo y por grupo (últimas 4, 8 o 12 semanas, comparado con el período anterior): series principales y accesorias, volumen, carga máxima y evolución semanal.
 
+## Importar el historial de Strong
+
+Con una exportación CSV de la app Strong (Ajustes → Exportar datos):
+
+```bash
+node scripts/import-strong.mjs "C:\ruta\strong_workouts.csv" --dry-run   # solo valida
+node scripts/import-strong.mjs "C:\ruta\strong_workouts.csv"             # importa
+```
+
+- Antes de escribir crea una copia de la base en `data/backup-pre-strong-*.db`.
+- Es idempotente: volver a correrlo no duplica entrenamientos.
+- Los ejercicios se traducen y se vinculan al catálogo con sus músculos (mapa en `scripts/strong-exercises.mjs`; si el CSV trae un ejercicio nuevo, el script avisa y hay que agregarlo ahí).
+- Tipos de serie: `P` = calentamiento, `F` = al fallo, `S` = descendente. Los calentamientos se guardan pero no cuentan en el progreso por músculo, el volumen ni el historial.
+- Se asume que los pesos están en kg. El RPE no se importa.
+- Los entrenamientos importados quedan con la nota «Importado de Strong» y sin rutina asociada.
+
 ## Reglas de diseño
 
 - El historial nunca se reescribe: los registros guardan copias (objetivo del hábito, nombre del ejercicio, macros del alimento), los objetivos se versionan por fecha y los hábitos/rutinas se archivan en vez de borrarse.
