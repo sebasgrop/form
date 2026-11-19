@@ -15,7 +15,7 @@ const TABLES_WITH_UPDATED_AT = [
   "body_measurements",
 ] as const;
 
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
 
 /**
  * Migraciones desde bases existentes. La clave es la versión de origen.
@@ -35,6 +35,10 @@ export const MIGRATIONS: Record<number, string> = {
   // v4 -> v5: platos (las tablas dishes y dish_items se crean en SCHEMA_SQL); las comidas registradas recuerdan su plato
   4: `
     ALTER TABLE meal_entries ADD COLUMN dish_id INTEGER REFERENCES dishes(id) ON DELETE SET NULL;
+  `,
+  // v5 -> v6: tabla de referencia de la que proviene un alimento (ENNyS 2, Argenfood...); el índice único se crea en SCHEMA_SQL
+  5: `
+    ALTER TABLE foods ADD COLUMN reference TEXT;
   `,
 };
 
@@ -189,11 +193,13 @@ CREATE TABLE IF NOT EXISTS foods (
   fat_g REAL NOT NULL CHECK (fat_g >= 0),
   source TEXT NOT NULL DEFAULT 'custom' CHECK (source IN ('seed_approx','custom')),
   fdc_id INTEGER, -- id en USDA FoodData Central si el alimento se importó de allí
+  reference TEXT, -- tabla de referencia de origen (ej. ENNyS 2) para alimentos precargados desde tablas oficiales
   archived_at TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE UNIQUE INDEX IF NOT EXISTS foods_fdc_idx ON foods(fdc_id) WHERE fdc_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS foods_reference_name_idx ON foods(reference, name COLLATE NOCASE) WHERE reference IS NOT NULL;
 
 -- Un plato es un conjunto de alimentos con cantidades (en la unidad de cada alimento) que rinde N porciones (columna servings).
 CREATE TABLE IF NOT EXISTS dishes (
