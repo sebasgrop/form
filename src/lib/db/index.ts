@@ -2,7 +2,7 @@ import "server-only";
 import { DatabaseSync, type SQLInputValue } from "node:sqlite";
 import fs from "node:fs";
 import path from "node:path";
-import { SCHEMA_SQL, SCHEMA_VERSION } from "./schema";
+import { MIGRATIONS, SCHEMA_SQL, SCHEMA_VERSION } from "./schema";
 import { seedIfEmpty } from "./seed";
 
 export const DATA_DIR = process.env.FORM_DATA_DIR ?? path.join(/*turbopackIgnore: true*/ process.cwd(), "data");
@@ -14,12 +14,34 @@ function open(): DatabaseSync {
   fs.mkdirSync(PHOTOS_DIR, { recursive: true });
   const db = new DatabaseSync(path.join(/*turbopackIgnore: true*/ DATA_DIR, "form.db"));
   db.exec("PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;");
-  const { user_version: version } = db.prepare("PRAGMA user_version").get() as { user_version: number };
+  let { user_version: version } = db.prepare("PRAGMA user_version").get() as { user_version: number };
   const hasProfile = db.prepare("SELECT 1 AS x FROM sqlite_master WHERE name = 'profile'").get();
-  if (hasProfile && version < SCHEMA_VERSION) {
-    throw new Error(
-      `La base de datos (versión ${version}) es anterior a la versión ${SCHEMA_VERSION} del esquema. Mové data/form.db a otra carpeta para empezar de cero.`,
-    );
+  if (hasProfile) {
+    if (version < 2) {
+      throw new Error(
+        `La base de datos (versión ${version}) es demasiado antigua para migrarse. Mové data/form.db a otra carpeta para empezar de cero.`,
+      );
+    }
+    // Migraciones encadenadas, cada una atómica. Se respalda antes de tocar nada.
+    while (version < SCHEMA_VERSION) {
+      const sql = MIGRATIONS[version];
+      if (!sql) throw new Error(`No hay migración desde la versión ${version} del esquema.`);
+      if (version === 2) {
+        // copia consistente de la base (aunque esté en modo WAL) antes de migrar
+        const backup = path.join(/*turbopackIgnore: true*/ DATA_DIR, `backup-v${version}-${Date.now()}.db`);
+        db.exec(`VACUUM INTO '${backup.replaceAll("'", "''")}'`);
+      }
+      db.exec("BEGIN");
+      try {
+        db.exec(sql);
+        db.exec(`PRAGMA user_version = ${version + 1}`);
+        db.exec("COMMIT");
+      } catch (e) {
+        db.exec("ROLLBACK");
+        throw e;
+      }
+      version++;
+    }
   }
   db.exec(SCHEMA_SQL);
   db.exec(`PRAGMA user_version = ${SCHEMA_VERSION}`);

@@ -14,7 +14,20 @@ const TABLES_WITH_UPDATED_AT = [
   "body_measurements",
 ] as const;
 
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
+
+/**
+ * Migraciones desde bases existentes. La clave es la versión de origen.
+ * Una base nueva se crea directamente con SCHEMA_SQL (ya incluye todos los cambios).
+ */
+export const MIGRATIONS: Record<number, string> = {
+  // v2 -> v3: tipo de serie (calentamiento/fallo/descendente) y duración en segundos
+  2: `
+    ALTER TABLE exercise_sets ADD COLUMN kind TEXT NOT NULL DEFAULT 'normal'
+      CHECK (kind IN ('normal','warmup','failure','drop'));
+    ALTER TABLE exercise_sets ADD COLUMN duration_seconds INTEGER CHECK (duration_seconds >= 0);
+  `,
+};
 
 export const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS profile (
@@ -148,6 +161,8 @@ CREATE TABLE IF NOT EXISTS exercise_sets (
   set_number INTEGER NOT NULL CHECK (set_number >= 1),
   weight_kg REAL NOT NULL DEFAULT 0 CHECK (weight_kg >= 0),
   reps INTEGER NOT NULL CHECK (reps BETWEEN 0 AND 200),
+  kind TEXT NOT NULL DEFAULT 'normal' CHECK (kind IN ('normal','warmup','failure','drop')),
+  duration_seconds INTEGER CHECK (duration_seconds >= 0), -- ejercicios isométricos/cardio medidos en tiempo
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now')),
   UNIQUE (session_id, exercise_position, set_number)
