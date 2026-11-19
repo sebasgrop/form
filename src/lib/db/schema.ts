@@ -14,7 +14,7 @@ const TABLES_WITH_UPDATED_AT = [
   "body_measurements",
 ] as const;
 
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 /**
  * Migraciones desde bases existentes. La clave es la versión de origen.
@@ -26,6 +26,10 @@ export const MIGRATIONS: Record<number, string> = {
     ALTER TABLE exercise_sets ADD COLUMN kind TEXT NOT NULL DEFAULT 'normal'
       CHECK (kind IN ('normal','warmup','failure','drop'));
     ALTER TABLE exercise_sets ADD COLUMN duration_seconds INTEGER CHECK (duration_seconds >= 0);
+  `,
+  // v3 -> v4: origen USDA de los alimentos (el índice único se crea en SCHEMA_SQL)
+  3: `
+    ALTER TABLE foods ADD COLUMN fdc_id INTEGER;
   `,
 };
 
@@ -179,10 +183,12 @@ CREATE TABLE IF NOT EXISTS foods (
   carbs_g REAL NOT NULL CHECK (carbs_g >= 0),
   fat_g REAL NOT NULL CHECK (fat_g >= 0),
   source TEXT NOT NULL DEFAULT 'custom' CHECK (source IN ('seed_approx','custom')),
+  fdc_id INTEGER, -- id en USDA FoodData Central si el alimento se importó de allí
   archived_at TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+CREATE UNIQUE INDEX IF NOT EXISTS foods_fdc_idx ON foods(fdc_id) WHERE fdc_id IS NOT NULL;
 
 -- Macros are stored as the totals eaten at log time: editing a food never rewrites past days.
 CREATE TABLE IF NOT EXISTS meal_entries (

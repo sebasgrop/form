@@ -23,14 +23,14 @@ function open(): DatabaseSync {
       );
     }
     // Migraciones encadenadas, cada una atómica. Se respalda antes de tocar nada.
+    if (version < SCHEMA_VERSION) {
+      // copia consistente de la base (aunque esté en modo WAL) antes de migrar
+      const backup = path.join(/*turbopackIgnore: true*/ DATA_DIR, `backup-v${version}-${Date.now()}.db`);
+      db.exec(`VACUUM INTO '${backup.replaceAll("'", "''")}'`);
+    }
     while (version < SCHEMA_VERSION) {
       const sql = MIGRATIONS[version];
       if (!sql) throw new Error(`No hay migración desde la versión ${version} del esquema.`);
-      if (version === 2) {
-        // copia consistente de la base (aunque esté en modo WAL) antes de migrar
-        const backup = path.join(/*turbopackIgnore: true*/ DATA_DIR, `backup-v${version}-${Date.now()}.db`);
-        db.exec(`VACUUM INTO '${backup.replaceAll("'", "''")}'`);
-      }
       db.exec("BEGIN");
       try {
         db.exec(sql);

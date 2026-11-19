@@ -18,7 +18,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { STRONG_EXERCISES } from "./strong-exercises.mjs";
 
-const SCHEMA_VERSION = 3;
+const MIN_SCHEMA_VERSION = 3; // necesita las columnas kind y duration_seconds
 const MARKER = "Importado de Strong";
 
 const args = process.argv.slice(2);
@@ -173,8 +173,8 @@ if (!fs.existsSync(dbPath)) {
 const db = new DatabaseSync(dbPath);
 db.exec("PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 10000;");
 const { user_version: version } = db.prepare("PRAGMA user_version").get();
-if (version !== SCHEMA_VERSION) {
-  console.error(`La base está en la versión ${version} del esquema y se necesita la ${SCHEMA_VERSION}. Reiniciá la app y abrila una vez para migrarla.`);
+if (version < MIN_SCHEMA_VERSION) {
+  console.error(`La base está en la versión ${version} del esquema y se necesita la ${MIN_SCHEMA_VERSION} o posterior. Reiniciá la app y abrila una vez para migrarla.`);
   process.exit(1);
 }
 
