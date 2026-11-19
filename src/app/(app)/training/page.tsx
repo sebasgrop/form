@@ -155,7 +155,15 @@ export default function TrainingPage() {
 
         <div className="min-w-0 lg:col-span-2">
           <Card>
-            <CardHeader title="Historial" hint="Entrenamientos más recientes" />
+            <CardHeader
+              title="Historial"
+              hint="Entrenamientos más recientes"
+              action={
+                <Link href="/training/history" className="text-xs text-muted hover:text-fg">
+                  Ver todo
+                </Link>
+              }
+            />
             {history.length === 0 ? (
               <EmptyState title="Todavía no hay entrenamientos" description="Los entrenamientos terminados aparecen acá." />
             ) : (

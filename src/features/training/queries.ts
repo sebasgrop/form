@@ -127,3 +127,29 @@ export function finishedSessionsBetween(from: string, to: string): number {
     )?.n ?? 0
   );
 }
+
+/** Historial completo de entrenamientos terminados, paginado y filtrable por nombre o ejercicio. */
+export function listSessions(opts: { limit: number; offset: number; q?: string }): { rows: SessionSummary[]; total: number } {
+  const term = opts.q?.trim();
+  // '!' hace de carácter de escape para que % y _ del texto buscado no actúen como comodines
+  const like = term ? `%${term.replace(/[%_!]/g, (c) => `!${c}`)}%` : null;
+  const where = `s.ended_at IS NOT NULL${
+    like
+      ? ` AND (s.name LIKE ? ESCAPE '!' OR EXISTS (SELECT 1 FROM exercise_sets x WHERE x.session_id = s.id AND x.exercise_name LIKE ? ESCAPE '!'))`
+      : ""
+  }`;
+  const params = like ? [like, like] : [];
+  const total = get<{ n: number }>(`SELECT COUNT(*) AS n FROM workout_sessions s WHERE ${where}`, ...params)?.n ?? 0;
+  const rows = all<SessionSummary>(
+    `SELECT s.*, COUNT(CASE WHEN e.kind <> 'warmup' THEN 1 END) AS set_count,
+            COALESCE(SUM(CASE WHEN e.kind <> 'warmup' THEN e.weight_kg * e.reps END), 0) AS volume,
+            COUNT(DISTINCT e.exercise_position) AS exercise_count
+     FROM workout_sessions s LEFT JOIN exercise_sets e ON e.session_id = s.id
+     WHERE ${where}
+     GROUP BY s.id ORDER BY s.session_date DESC, s.started_at DESC, s.id DESC LIMIT ? OFFSET ?`,
+    ...params,
+    opts.limit,
+    opts.offset,
+  );
+  return { rows, total };
+}
