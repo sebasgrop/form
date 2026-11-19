@@ -21,6 +21,7 @@ export type Food = {
   carbs_g: number;
   fat_g: number;
   source: "seed_approx" | "custom";
+  fdc_id: number | null;
 };
 
 export type MealEntry = Macros & {

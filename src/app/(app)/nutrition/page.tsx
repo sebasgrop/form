@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Pencil, Plus, Target } from "lucide-react";
+import { ChevronLeft, ChevronRight, Database, Pencil, Plus, Target } from "lucide-react";
 import { Card, CardHeader, PageHeader } from "@/components/ui/card";
 import { ProgressBar } from "@/components/ui/progress";
 import { ModalButton } from "@/components/ui/modal";
@@ -9,6 +9,8 @@ import { EmptyState } from "@/components/ui/states";
 import { buttonClass } from "@/components/ui/button";
 import { DailyBars } from "@/components/charts/bar-chart";
 import { AddFoodForm, EntryEditForm, FoodForm, GoalsForm } from "@/components/nutrition/forms";
+import { UsdaSearch } from "@/components/nutrition/usda-search";
+import { usdaConfigured } from "@/features/nutrition/usda";
 import { deleteFood, deleteMealEntry } from "@/features/nutrition/actions";
 import { MEALS, dailyTotals, goalsFor, listFoods, mealsForDate, round, totalsForDate } from "@/features/nutrition/queries";
 import { addDays, formatLong, formatShort, lastNDays, today } from "@/lib/dates";
@@ -148,9 +150,14 @@ export default async function NutritionPage({ searchParams }: { searchParams: Pr
             title="Biblioteca de alimentos"
             hint="Por porción. Los alimentos iniciales son aproximados: editalos para que coincidan con tus etiquetas."
             action={
-              <ModalButton title="Nuevo alimento" label="Nuevo" size="sm" icon={<Plus className="h-3.5 w-3.5" />}>
-                <FoodForm />
-              </ModalButton>
+              <div className="flex gap-1.5">
+                <ModalButton title="Buscar en USDA FoodData Central" label="USDA" size="sm" icon={<Database className="h-3.5 w-3.5" />} wide>
+                  <UsdaSearch configured={usdaConfigured()} />
+                </ModalButton>
+                <ModalButton title="Nuevo alimento" label="Nuevo" size="sm" icon={<Plus className="h-3.5 w-3.5" />}>
+                  <FoodForm />
+                </ModalButton>
+              </div>
             }
           />
           {foods.length === 0 ? (
@@ -162,6 +169,9 @@ export default async function NutritionPage({ searchParams }: { searchParams: Pr
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm">
                       {f.name}
+                      {f.fdc_id && (
+                        <span className="ml-2 rounded-full border border-accent/40 bg-accent-soft px-1.5 py-px text-[10px] text-accent-strong">USDA</span>
+                      )}
                       {f.source === "seed_approx" && (
                         <span className="ml-2 rounded-full border border-line-strong px-1.5 py-px text-[10px] text-muted">aprox.</span>
                       )}

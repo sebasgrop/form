@@ -94,12 +94,31 @@ const parseFood = (fd: FormData) =>
 export async function createFood(fd: FormData): Promise<ActionResult> {
   return guard(() => {
     const v = parseFood(fd);
+    // alimentos importados de USDA: se guarda su id para no duplicarlos
+    const fdc = Number(fd.get("fdc_id"));
+    const fdcId = Number.isInteger(fdc) && fdc > 0 ? fdc : null;
+    if (fdcId) {
+      const existing = get<{ id: number; name: string; archived_at: string | null }>(
+        "SELECT id, name, archived_at FROM foods WHERE fdc_id = ?",
+        fdcId,
+      );
+      if (existing && !existing.archived_at) return fail(`Ya tenés este alimento en tu biblioteca: «${existing.name}».`);
+      if (existing) {
+        // estaba quitado de la biblioteca: se restaura con los valores nuevos
+        run(
+          "UPDATE foods SET name = ?, serving_size = ?, serving_unit = ?, calories = ?, protein_g = ?, carbs_g = ?, fat_g = ?, archived_at = NULL WHERE id = ?",
+          v.name, v.serving_size, v.serving_unit, v.calories, v.protein_g, v.carbs_g, v.fat_g, existing.id,
+        );
+        refresh();
+        return ok("Alimento agregado");
+      }
+    }
     run(
-      "INSERT INTO foods (name, serving_size, serving_unit, calories, protein_g, carbs_g, fat_g, source) VALUES (?, ?, ?, ?, ?, ?, ?, 'custom')",
-      v.name, v.serving_size, v.serving_unit, v.calories, v.protein_g, v.carbs_g, v.fat_g,
+      "INSERT INTO foods (name, serving_size, serving_unit, calories, protein_g, carbs_g, fat_g, source, fdc_id) VALUES (?, ?, ?, ?, ?, ?, ?, 'custom', ?)",
+      v.name, v.serving_size, v.serving_unit, v.calories, v.protein_g, v.carbs_g, v.fat_g, fdcId,
     );
     refresh();
-    return ok("Alimento creado");
+    return ok(fdcId ? "Alimento agregado" : "Alimento creado");
   });
 }
 
