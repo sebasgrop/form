@@ -29,6 +29,7 @@ export type MealEntry = Macros & {
   entry_date: string;
   meal: Meal;
   food_id: number | null;
+  dish_id: number | null;
   food_name: string;
   quantity: number;
   serving_unit: string;

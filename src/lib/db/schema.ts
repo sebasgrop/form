@@ -10,11 +10,12 @@ const TABLES_WITH_UPDATED_AT = [
   "exercise_sets",
   "exercise_catalog",
   "foods",
+  "dishes",
   "meal_entries",
   "body_measurements",
 ] as const;
 
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 /**
  * Migraciones desde bases existentes. La clave es la versión de origen.
@@ -30,6 +31,10 @@ export const MIGRATIONS: Record<number, string> = {
   // v3 -> v4: origen USDA de los alimentos (el índice único se crea en SCHEMA_SQL)
   3: `
     ALTER TABLE foods ADD COLUMN fdc_id INTEGER;
+  `,
+  // v4 -> v5: platos (las tablas dishes y dish_items se crean en SCHEMA_SQL); las comidas registradas recuerdan su plato
+  4: `
+    ALTER TABLE meal_entries ADD COLUMN dish_id INTEGER REFERENCES dishes(id) ON DELETE SET NULL;
   `,
 };
 
@@ -190,12 +195,31 @@ CREATE TABLE IF NOT EXISTS foods (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS foods_fdc_idx ON foods(fdc_id) WHERE fdc_id IS NOT NULL;
 
+-- Un plato es un conjunto de alimentos con cantidades (en la unidad de cada alimento) que rinde N porciones (columna servings).
+CREATE TABLE IF NOT EXISTS dishes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL UNIQUE COLLATE NOCASE CHECK (length(name) BETWEEN 1 AND 120),
+  servings REAL NOT NULL DEFAULT 1 CHECK (servings > 0),
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS dish_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  dish_id INTEGER NOT NULL REFERENCES dishes(id) ON DELETE CASCADE,
+  food_id INTEGER NOT NULL REFERENCES foods(id) ON DELETE RESTRICT,
+  quantity REAL NOT NULL CHECK (quantity > 0),
+  position INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS dish_items_dish_idx ON dish_items(dish_id, position);
+
 -- Macros are stored as the totals eaten at log time: editing a food never rewrites past days.
 CREATE TABLE IF NOT EXISTS meal_entries (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   entry_date TEXT NOT NULL,
   meal TEXT NOT NULL CHECK (meal IN ('breakfast','lunch','snack','dinner')),
   food_id INTEGER REFERENCES foods(id) ON DELETE SET NULL,
+  dish_id INTEGER REFERENCES dishes(id) ON DELETE SET NULL,
   food_name TEXT NOT NULL,
   quantity REAL NOT NULL CHECK (quantity > 0),
   serving_unit TEXT NOT NULL DEFAULT 'g',
