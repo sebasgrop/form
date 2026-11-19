@@ -143,7 +143,7 @@ export function FoodForm({ food, prefill }: { food?: FoodOpt; prefill?: FoodPref
           <input name="serving_unit" required maxLength={12} defaultValue={food?.serving_unit ?? "g"} className={inputClass} placeholder="g, ml, unidad" />
         </Field>
       </div>
-      <p className="-mb-2 text-[11px] text-muted">Los valores de abajo corresponden a una porción de ese tamaño.</p>
+      <p className="text-[11px] text-muted">Los valores de abajo corresponden a una porción de ese tamaño.</p>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Calorías (kcal)">
           <input name="calories" type="number" step="any" min={0} required defaultValue={v(food?.calories, prefill?.calories)} className={inputClass} />
